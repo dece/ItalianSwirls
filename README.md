@@ -48,3 +48,7 @@ HA!
 Take the string “Is this a Star Wars reference?” Language Server, compress it to
 `ITASWRLS` and expand it back to Italian Swirls. Italian dishes are made of few
 elements that work well together. Enough questions!
+
+### License
+
+GPLv3.
