@@ -1,2 +1,2 @@
-pygls
+pygls ~= 0.13.1
 jedi ~= 0.18.2
