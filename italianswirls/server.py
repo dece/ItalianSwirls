@@ -3,13 +3,13 @@ from typing import Optional
 
 from jedi import Script
 from jedi.api.classes import Name
-from pygls.lsp.methods import COMPLETION, DEFINITION, HOVER
+from pygls.lsp.methods import COMPLETION, DEFINITION, HOVER, TYPE_DEFINITION
 from pygls.lsp.types import (CompletionItem, CompletionItemKind,
                              CompletionList, CompletionOptions,
                              CompletionParams, DefinitionParams, Hover,
                              HoverParams, InsertTextFormat,
                              Location, Position, Range,
-                             TextDocumentPositionParams)
+                             TextDocumentPositionParams, TypeDefinitionParams)
 from pygls.server import LanguageServer
 from pygls.workspace import Document
 
@@ -138,6 +138,18 @@ async def do_definition(
         follow_imports=True,
         follow_builtin_imports=True,
     )
+    return get_lsp_locations(jedi_names) or None
+
+
+@LS.feature(TYPE_DEFINITION)
+async def do_type_definition(
+    server: LanguageServer,
+    params: TypeDefinitionParams,
+) -> Optional[list[Location]]:
+    """Return the type definition location(s) of the target symbol."""
+    script = get_jedi_script_from_params(params, server)
+    jedi_position = get_jedi_position(params.position)
+    jedi_names = script.infer(*jedi_position)
     return get_lsp_locations(jedi_names) or None
 
 
