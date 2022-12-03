@@ -2,11 +2,14 @@ import logging
 from typing import Optional
 
 from jedi import Script
-from pygls.lsp.methods import COMPLETION, HOVER, INITIALIZE
+from jedi.api.classes import Name
+from pygls.lsp.methods import COMPLETION, DEFINITION, HOVER
 from pygls.lsp.types import (CompletionItem, CompletionItemKind,
                              CompletionList, CompletionOptions,
-                             CompletionParams, Hover, InsertTextFormat,
-                             Position, TextDocumentPositionParams)
+                             CompletionParams, DefinitionParams, Hover,
+                             HoverParams, InsertTextFormat,
+                             Location, Position, Range,
+                             TextDocumentPositionParams)
 from pygls.server import LanguageServer
 from pygls.workspace import Document
 
@@ -30,25 +33,67 @@ JEDI_COMPLETION_TYPE_MAP = {
 
 
 def get_jedi_script(document: Document) -> Script:
-    """Get Jedi Script object from this document and project."""
+    """Get Jedi Script object from this document."""
     return Script(code=document.source, path=document.path)
 
 
+def get_jedi_script_from_params(
+    params: TextDocumentPositionParams,
+    server: LanguageServer
+) -> Script:
+    """Get Jedi Script using text document params provided by the client."""
+    document_uri = params.text_document.uri
+    document = server.workspace.get_document(document_uri)
+    script = get_jedi_script(document)
+    return script
+
+
 def get_jedi_position(position: Position) -> tuple[int, int]:
-    """Translate pygls's Position to Jedi position (line is 1-based)."""
+    """Translate LSP Position to Jedi position (where line is 1-based)."""
     return position.line + 1, position.character
 
 
-def get_pygls_compl_kind(jedi_compl_type: str) -> CompletionItemKind:
+def get_lsp_position(line: int, column: int) -> Position:
+    """Translate Jedi position to LSP Position (where line is 0-based)."""
+    return Position(line=line - 1, character=column)
+
+
+def get_lsp_range(name: Name) -> Optional[Range]:
+    """Get an LSP range for this name, if it has a location."""
+    if name.line is None or name.column is None:
+        return None
+    start_position = get_lsp_position(name.line, name.column)
+    end_position = get_lsp_position(name.line, name.column + len(name.name))
+    return Range(start=start_position, end=end_position)
+
+
+def get_lsp_location(name: Name) -> Optional[Location]:
+    """Return an LSP location from this Jedi Name."""
+    if name.module_path is None:
+        return None
+    if (lsp_range := get_lsp_range(name)) is None:
+        return None
+    return Location(uri=name.module_path.as_uri(), range=lsp_range)
+
+
+def get_lsp_locations(names: list[Name]) -> list[Location]:
+    """Return a list of LSP locations from this list of Jedi Names.
+
+    Names that cannot be converted to a LSP location are discarded.
+    """
+    lsp_locations = []
+    for name in names:
+        if lsp_location := get_lsp_location(name):
+            lsp_locations.append(lsp_location)
+    return lsp_locations
+
+
+def get_lsp_completion_kind(jedi_compl_type: str) -> CompletionItemKind:
+    """Return an LSP completion item kind from this Jedi completion type."""
     return JEDI_COMPLETION_TYPE_MAP.get(
         jedi_compl_type,
         CompletionItemKind.Text
     )
-
-
-@LS.feature(INITIALIZE)
-async def do_initialize(*args):
-    LOG.debug("do_initialize 👋")
 
 
 @LS.feature(COMPLETION, CompletionOptions(trigger_characters=["."]))
@@ -57,9 +102,7 @@ async def do_completion(
     params: CompletionParams,
 ) -> CompletionList:
     """Return completion items."""
-    document_uri = params.text_document.uri
-    document = server.workspace.get_document(document_uri)
-    script = get_jedi_script(document)
+    script = get_jedi_script_from_params(params, server)
     jedi_position = get_jedi_position(params.position)
     jedi_completions = script.complete(*jedi_position)
 
@@ -69,7 +112,7 @@ async def do_completion(
         item = CompletionItem(
             label=name,
             filter_text=name,
-            kind=get_pygls_compl_kind(jedi_completion.type),
+            kind=get_lsp_completion_kind(jedi_completion.type),
             sort_text=name,
             insert_text_name=name,
             insert_text_format=InsertTextFormat.PlainText,
@@ -82,20 +125,36 @@ async def do_completion(
     )
 
 
+@LS.feature(DEFINITION)
+async def do_definition(
+    server: LanguageServer,
+    params: DefinitionParams,
+) -> Optional[list[Location]]:
+    """Return the definition location(s) of the target symbol."""
+    script = get_jedi_script_from_params(params, server)
+    jedi_position = get_jedi_position(params.position)
+    jedi_names = script.goto(
+        *jedi_position,
+        follow_imports=True,
+        follow_builtin_imports=True,
+    )
+    return get_lsp_locations(jedi_names) or None
+
+
 @LS.feature(HOVER)
 async def do_hover(
     server: LanguageServer,
-    params: TextDocumentPositionParams,
+    params: HoverParams,
 ) -> Optional[Hover]:
-    """Provide "hover", which is documentation of a symbol.
+    """Provide "hover", which is the documentation of the target symbol.
 
     Jedi provides a list of names with information, usually only one. We handle
     them all and concatenate them, separated by a horizontal line. For
-    simplicity, the text is mostly provided untouched.
+    simplicity, the text is mostly provided untouched, including docstrings, so
+    if your client tries to interpret it as Markdown even though there are
+    rogue `**kwargs` hanging around you might have a few display issues.
     """
-    document_uri = params.text_document.uri
-    document = server.workspace.get_document(document_uri)
-    script = get_jedi_script(document)
+    script = get_jedi_script_from_params(params, server)
     jedi_position = get_jedi_position(params.position)
     jedi_help_names = script.help(*jedi_position)
     if not jedi_help_names:
@@ -116,7 +175,7 @@ async def do_hover(
         return None
 
     hover_text = "\n\n---\n\n".join(help_texts)
-    return Hover(contents=hover_text)  # TODO range
+    return Hover(contents=hover_text)
 
 
 if __name__ == "__main__":
