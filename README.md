@@ -6,7 +6,21 @@ Minimal Python language server, based on [Jedi][jedi] and [pygls][pygls].
 [jedi]: https://jedi.readthedocs.io/en/latest/index.html
 [pygls]: https://pygls.readthedocs.io/en/latest/index.html
 
-WIP.
+WIP! ⚠ 👷🚧
+
+Supported features:
+
+| LSP method                | Description   |
+|---------------------------|---------------|
+| `textDocument/completion` | Completions   |
+| `textDocument/hover`      | Documentation |
+
+
+
+Install
+-------
+
+TODO
 
 
 

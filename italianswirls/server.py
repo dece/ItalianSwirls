@@ -1,10 +1,11 @@
 import logging
 
 from jedi import Script
-from pygls.lsp.methods import COMPLETION, INITIALIZE
+from pygls.lsp.methods import COMPLETION, HOVER, INITIALIZE
 from pygls.lsp.types import (CompletionItem, CompletionItemKind,
                              CompletionList, CompletionOptions,
-                             CompletionParams, InsertTextFormat, Position)
+                             CompletionParams, Hover, InsertTextFormat,
+                             Position, TextDocumentPositionParams)
 from pygls.server import LanguageServer
 from pygls.workspace import Document
 
@@ -50,14 +51,16 @@ async def do_initialize(*args):
 
 
 @LS.feature(COMPLETION, CompletionOptions(trigger_characters=["."]))
-async def do_completion(server: LanguageServer, params: CompletionParams):
+async def do_completion(
+    server: LanguageServer,
+    params: CompletionParams,
+) -> CompletionList:
     """Return completion items."""
     document_uri = params.text_document.uri
     document = server.workspace.get_document(document_uri)
     script = get_jedi_script(document)
     jedi_position = get_jedi_position(params.position)
     jedi_completions = script.complete(*jedi_position)
-    LOG.debug(f"Completions: {jedi_completions}")
 
     completion_items = []
     for jedi_completion in jedi_completions:
@@ -76,6 +79,36 @@ async def do_completion(server: LanguageServer, params: CompletionParams):
         is_incomplete=False,
         items=completion_items,
     )
+
+
+@LS.feature(HOVER)
+async def do_hover(
+    server: LanguageServer,
+    params: TextDocumentPositionParams,
+) -> Hover:
+    """Provide "hover", which is documentation of a symbol.
+
+    Jedi provides a list of names with information, usually only one. We handle
+    them all and concatenate them, separated by a horizontal line. For
+    simplicity, the text is mostly provided untouched.
+    """
+    document_uri = params.text_document.uri
+    document = server.workspace.get_document(document_uri)
+    script = get_jedi_script(document)
+    jedi_position = get_jedi_position(params.position)
+    jedi_help_names = script.help(*jedi_position)
+
+    help_texts = []
+    for jedi_name in jedi_help_names:
+        text = f"`{jedi_name.full_name}`"
+        if sigs := jedi_name.get_signatures():
+            text += "\n" + "\n".join(f"`{sig.to_string()}`" for sig in sigs)
+        if docstring := jedi_name.docstring(raw=True):
+            text += "\n\n" + docstring
+        help_texts.append(text)
+
+    hover_text = "\n\n---\n\n".join(help_texts)
+    return Hover(contents=hover_text)  # TODO range
 
 
 if __name__ == "__main__":
