@@ -10,10 +10,12 @@ WIP! ⚠ 👷🚧
 
 Supported features:
 
-| LSP method                | Description   |
-|---------------------------|---------------|
-| `textDocument/completion` | Completions   |
-| `textDocument/hover`      | Documentation |
+| LSP method                    | Description           |
+|-------------------------------|-----------------------|
+| `textDocument/completion`     | Completions           |
+| `textDocument/definition`     | Go to definition      |
+| `textDocument/typeDefinition` | Go to type definition |
+| `textDocument/hover`          | Documentation         |
 
 
 
