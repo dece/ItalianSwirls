@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from jedi import Script
 from pygls.lsp.methods import COMPLETION, HOVER, INITIALIZE
@@ -85,7 +86,7 @@ async def do_completion(
 async def do_hover(
     server: LanguageServer,
     params: TextDocumentPositionParams,
-) -> Hover:
+) -> Optional[Hover]:
     """Provide "hover", which is documentation of a symbol.
 
     Jedi provides a list of names with information, usually only one. We handle
@@ -97,15 +98,22 @@ async def do_hover(
     script = get_jedi_script(document)
     jedi_position = get_jedi_position(params.position)
     jedi_help_names = script.help(*jedi_position)
+    if not jedi_help_names:
+        return None
 
     help_texts = []
     for jedi_name in jedi_help_names:
-        text = f"`{jedi_name.full_name}`"
+        text = ""
+        if full_name := jedi_name.full_name:
+            text += f"`{full_name}`\n"
         if sigs := jedi_name.get_signatures():
-            text += "\n" + "\n".join(f"`{sig.to_string()}`" for sig in sigs)
+            text += "\n".join(f"`{sig.to_string()}`" for sig in sigs) + "\n"
         if docstring := jedi_name.docstring(raw=True):
-            text += "\n\n" + docstring
-        help_texts.append(text)
+            text += "\n" + docstring
+        if text:
+            help_texts.append(text)
+    if not help_texts:
+        return None
 
     hover_text = "\n\n---\n\n".join(help_texts)
     return Hover(contents=hover_text)  # TODO range
