@@ -12,10 +12,11 @@ Supported features:
 
 | LSP method                    | Description           |
 |-------------------------------|-----------------------|
-| `textDocument/completion`     | Completions           |
+| `textDocument/completion`     | Complete              |
 | `textDocument/definition`     | Go to definition      |
 | `textDocument/typeDefinition` | Go to type definition |
-| `textDocument/hover`          | Documentation         |
+| `textDocument/hover`          | Show documentation    |
+| `textDocument/references`     | Show references       |
 
 
 
