@@ -2,5 +2,24 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.poetry]
+name = "italianswirls"
+version = "0.0.1"
+description = "Minimal Python language server based on Jedi"
+authors = ["dece <shgck@pistache.land>"]
+readme = "README.md"
+repository = "https://git.dece.space/Dece/ItalianSwirls"
+[tool.poetry.scripts]
+italianswirls = 'italianswirls.cli:main'
+[tool.poetry.dependencies]
+python = ">=3.7,<3.12"
+pygls = "^0.13"
+jedi = "^0.18"
+[tool.poetry.group.dev]
+optional = true
+[tool.poetry.group.dev.dependencies]
+flake8 = "*"
+mypy = "*"
+
 [tool.mypy]
 ignore_missing_imports = true
