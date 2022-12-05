@@ -24,7 +24,43 @@ Supported features:
 Install
 -------
 
-TODO
+You can either clone and build the server package from this repository, or
+install it from PyPI:
+
+```bash
+pip install italianswirls
+```
+
+The only dependencies are pygls and Jedi.
+
+Refer to your client documentation on how to setup a server. Yes I have no idea
+how to do it; to use it in Neovim and its native LSP client, I forked
+[nvim-lspconfig][lspconfig-fork] to add my own config file. If it gains
+attraction I might submit a PR.
+
+[lspconfig-fork]: https://github.com/Dece/nvim-lspconfig
+
+Example lspconfig server configuration:
+
+```lua
+local util = require 'lspconfig.util'
+local root_files = { 'pyproject.toml', 'setup.cfg' }
+
+return {
+  default_config = {
+    cmd = { 'italianswirls' },
+    filetypes = { 'python' },
+    root_dir = util.root_pattern(unpack(root_files)),
+    single_file_support = true,
+  },
+  docs = {
+    description = "Minimal Python language server based on Jedi",
+    default_config = {
+      root_dir = "vim's starting directory",
+    },
+  },
+}
+```
 
 
 
