@@ -33,6 +33,11 @@ pip install italianswirls
 
 The only dependencies are pygls and Jedi.
 
+Because Jedi is able to detect which environment it is installed in and which
+environment is the project you're working on in, you do not need to install in
+every virtualenv where it might be handy; a global user (or root) installation
+should be sufficient to work regardless of your current virtualenv.
+
 Refer to your client documentation on how to setup a server. Yes I have no idea
 how to do it; to use it in Neovim and its native LSP client, I forked
 [nvim-lspconfig][lspconfig-fork] to add my own config file. If it gains
