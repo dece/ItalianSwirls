@@ -39,32 +39,29 @@ every virtualenv where it might be handy; a global user (or root) installation
 should be sufficient to work regardless of your current virtualenv.
 
 Refer to your client documentation on how to setup a server. Yes I have no idea
-how to do it; to use it in Neovim and its native LSP client, I forked
-[nvim-lspconfig][lspconfig-fork] to add my own config file. If it gains
-attraction I might submit a PR.
-
-[lspconfig-fork]: https://github.com/Dece/nvim-lspconfig
-
-Example lspconfig server configuration:
+how to do it for your editor, except if it's Neovim and you use nvim-lspconfig,
+then you can add something like that to your init:
 
 ```lua
-local util = require 'lspconfig.util'
-local root_files = { 'pyproject.toml', 'setup.cfg' }
-
-return {
+require('lspconfig.configs').italianswirls = {
   default_config = {
     cmd = { 'italianswirls' },
     filetypes = { 'python' },
-    root_dir = util.root_pattern(unpack(root_files)),
+    root_dir = require('lspconfig.util').root_pattern(
+      unpack({ 'pyproject.toml', 'setup.cfg' })
+    ),
     single_file_support = true,
   },
   docs = {
-    description = "Minimal Python language server based on Jedi",
+    description = "“Is this a Star Wars reference?” Language Server",
     default_config = {
       root_dir = "vim's starting directory",
     },
   },
 }
+
+-- using a previously defined on_attach function…
+lspconfig.italianswirls.setup { on_attach = on_attach }
 ```
 
 
